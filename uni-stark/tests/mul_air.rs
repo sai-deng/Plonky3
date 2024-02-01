@@ -7,6 +7,7 @@ use p3_dft::Radix2DitParallel;
 use p3_field::extension::BinomialExtensionField;
 use p3_field::Field;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
+use p3_goldilocks::Goldilocks;
 use p3_ldt::QuotientMmcs;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::{Matrix, MatrixRowSlices};
@@ -21,7 +22,6 @@ use tracing_forest::ForestLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use p3_goldilocks::Goldilocks;
 
 /// How many `a * b = c` operations to do per row in the AIR.
 const REPETITIONS: usize = 911;
@@ -174,7 +174,11 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
     let config = StarkConfigImpl::new(pcs);
     let mut challenger = Challenger::new(perm.clone());
     let trace = random_valid_trace::<Val>(HEIGHT);
-    tracing::info!("trace height: {}, trace width: {}", trace.height(), trace.width());
+    tracing::info!(
+        "trace height: {}, trace width: {}",
+        trace.height(),
+        trace.width()
+    );
     let proof = prove::<MyConfig, _>(&config, &MulAir, &mut challenger, trace);
 
     let serialized_proof = postcard::to_allocvec(&proof).expect("unable to serialize proof");

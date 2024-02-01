@@ -7,6 +7,7 @@ use p3_field::Field;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_keccak_air::{generate_trace_rows, KeccakAir};
 use p3_ldt::QuotientMmcs;
+use p3_matrix::Matrix;
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon2::{DiffusionMatrixBabybear, Poseidon2};
@@ -18,7 +19,6 @@ use tracing_forest::ForestLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use p3_matrix::Matrix;
 
 const NUM_HASHES: usize = 680;
 
@@ -75,7 +75,11 @@ fn main() -> Result<(), VerificationError> {
     let inputs = (0..NUM_HASHES).map(|_| random()).collect::<Vec<_>>();
     let trace = generate_trace_rows::<Val>(inputs);
     // print trace height and width in one line
-    println!("trace height: {}, trace width: {}", trace.height(), trace.width());
+    println!(
+        "trace height: {}, trace width: {}",
+        trace.height(),
+        trace.width()
+    );
 
     let proof = prove::<MyConfig, _>(&config, &KeccakAir {}, &mut challenger, trace);
 
