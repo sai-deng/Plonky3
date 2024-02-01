@@ -9,10 +9,10 @@ use p3_field::Field;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_ldt::QuotientMmcs;
 use p3_matrix::dense::RowMajorMatrix;
-use p3_matrix::MatrixRowSlices;
+use p3_matrix::{Matrix, MatrixRowSlices};
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
-use p3_poseidon2::{DiffusionMatrixBabybear, Poseidon2};
+use p3_poseidon2::{DiffusionMatrixBabybear, DiffusionMatrixGoldilocks, Poseidon2};
 use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
 use p3_uni_stark::{prove, verify, StarkConfigImpl, VerificationError};
 use rand::distributions::{Distribution, Standard};
@@ -21,9 +21,10 @@ use tracing_forest::ForestLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
+use p3_goldilocks::Goldilocks;
 
 /// How many `a * b = c` operations to do per row in the AIR.
-const REPETITIONS: usize = 10;
+const REPETITIONS: usize = 911;
 const TRACE_WIDTH: usize = REPETITIONS * 3;
 
 struct MulAir;
@@ -63,6 +64,67 @@ where
     RowMajorMatrix::new(trace_values, TRACE_WIDTH)
 }
 
+// #[test]
+// fn test_prove_goldilocks() -> Result<(), VerificationError> {
+//     Registry::default()
+//         .with(EnvFilter::from_default_env())
+//         .with(ForestLayer::default())
+//         .init();
+//
+//     const HEIGHT: usize = 1 << 6;
+//
+//     type Val = Goldilocks;
+//     type Domain = Val;
+//     type Challenge = BinomialExtensionField<Val, 2>;
+//     type PackedChallenge = BinomialExtensionField<<Domain as Field>::Packing, 2>;
+//
+//     type MyMds = CosetMds<Val, 8>;
+//     let mds = MyMds::default();
+//
+//     type Perm = Poseidon2<Val, MyMds, DiffusionMatrixGoldilocks, 8, 7>;
+//     let perm = Perm::new_from_rng(8, 22, mds, DiffusionMatrixGoldilocks, &mut thread_rng());
+//
+//     type MyHash = PaddingFreeSponge<Perm, 12, 8, 4>;
+//     let hash = MyHash::new(perm.clone());
+//
+//     type MyCompress = TruncatedPermutation<Perm, 2, 8, 12>;
+//     let compress = MyCompress::new(perm.clone());
+//
+//     type ValMmcs = FieldMerkleTreeMmcs<<Val as Field>::Packing, MyHash, MyCompress, 4>;
+//     let val_mmcs = ValMmcs::new(hash, compress);
+//
+//     type ChallengeMmcs = ExtensionMmcs<Val, Challenge, ValMmcs>;
+//     let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
+//
+//     type Dft = Radix2DitParallel;
+//     let dft = Dft {};
+//
+//     type Challenger = DuplexChallenger<Val, Perm, 8>;
+//
+//     type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
+//     type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
+//     let fri_config = MyFriConfig::new(1, 40, 8, challenge_mmcs);
+//     let ldt = FriLdt { config: fri_config };
+//
+//     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
+//     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
+//
+//     let pcs = Pcs::new(dft, val_mmcs, ldt);
+//     let config = StarkConfigImpl::new(pcs);
+//     let mut challenger = Challenger::new(perm.clone());
+//     let trace = random_valid_trace::<Val>(HEIGHT);
+//     let proof = prove::<MyConfig, _>(&config, &MulAir, &mut challenger, trace);
+//
+//     let serialized_proof = postcard::to_allocvec(&proof).expect("unable to serialize proof");
+//     tracing::debug!("serialized_proof len: {} bytes", serialized_proof.len());
+//
+//     let deserialized_proof =
+//         postcard::from_bytes(&serialized_proof).expect("unable to deserialize proof");
+//
+//     let mut challenger = Challenger::new(perm);
+//     verify(&config, &MulAir, &mut challenger, &deserialized_proof)
+// }
+
 #[test]
 fn test_prove_baby_bear() -> Result<(), VerificationError> {
     Registry::default()
@@ -70,7 +132,7 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
         .with(ForestLayer::default())
         .init();
 
-    const HEIGHT: usize = 1 << 6;
+    const HEIGHT: usize = 1 << 14;
 
     type Val = BabyBear;
     type Domain = Val;
@@ -102,7 +164,7 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
 
     type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
     type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
-    let fri_config = MyFriConfig::new(1, 40, 8, challenge_mmcs);
+    let fri_config = MyFriConfig::new(1, 100, 16, challenge_mmcs);
     let ldt = FriLdt { config: fri_config };
 
     type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
@@ -112,10 +174,11 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
     let config = StarkConfigImpl::new(pcs);
     let mut challenger = Challenger::new(perm.clone());
     let trace = random_valid_trace::<Val>(HEIGHT);
+    tracing::info!("trace height: {}, trace width: {}", trace.height(), trace.width());
     let proof = prove::<MyConfig, _>(&config, &MulAir, &mut challenger, trace);
 
     let serialized_proof = postcard::to_allocvec(&proof).expect("unable to serialize proof");
-    tracing::debug!("serialized_proof len: {} bytes", serialized_proof.len());
+    tracing::info!("serialized_proof len: {} bytes", serialized_proof.len());
 
     let deserialized_proof =
         postcard::from_bytes(&serialized_proof).expect("unable to deserialize proof");
