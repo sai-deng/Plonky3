@@ -8,13 +8,17 @@ use p3_field::extension::BinomialExtensionField;
 use p3_field::Field;
 use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
 use p3_goldilocks::Goldilocks;
+use p3_keccak::Keccak256Hash;
 use p3_ldt::QuotientMmcs;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::{Matrix, MatrixRowSlices};
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon2::{DiffusionMatrixBabybear, DiffusionMatrixGoldilocks, Poseidon2};
-use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32, TruncatedPermutation};
+use p3_symmetric::{
+    CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32, SerializingHasher64,
+    TruncatedPermutation,
+};
 use p3_uni_stark::{prove, verify, StarkConfigImpl, VerificationError};
 use rand::distributions::{Distribution, Standard};
 use rand::{thread_rng, Rng};
@@ -22,7 +26,6 @@ use tracing_forest::ForestLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
-use p3_keccak::Keccak256Hash;
 
 /// How many `a * b = c` operations to do per row in the AIR.
 const REPETITIONS: usize = 911;
@@ -135,24 +138,23 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
 
     const HEIGHT: usize = 1 << 14;
 
-    type Val = BabyBear;
+    type Val = Goldilocks;
     type Domain = Val;
-    type Challenge = BinomialExtensionField<Val, 4>;
-    type PackedChallenge = BinomialExtensionField<<Domain as Field>::Packing, 4>;
+    type Challenge = BinomialExtensionField<Val, 2>;
+    type PackedChallenge = BinomialExtensionField<<Domain as Field>::Packing, 2>;
 
-    type MyMds = CosetMds<Val, 16>;
+    type MyMds = CosetMds<Val, 8>;
     let mds = MyMds::default();
 
-    type Perm = Poseidon2<Val, MyMds, DiffusionMatrixBabybear, 16, 7>;
-    let perm = Perm::new_from_rng(8, 22, mds, DiffusionMatrixBabybear, &mut thread_rng());
+    type Perm = Poseidon2<Val, MyMds, DiffusionMatrixGoldilocks, 8, 7>;
+    let perm = Perm::new_from_rng(8, 22, mds, DiffusionMatrixGoldilocks, &mut thread_rng());
 
-    type MyHash = SerializingHasher32<Keccak256Hash>;
+    type MyHash = SerializingHasher64<Keccak256Hash>;
     let hash = MyHash::new(Keccak256Hash {});
-
-    type MyCompress = CompressionFunctionFromHasher<Val, MyHash, 2, 8>;
+    type MyCompress = CompressionFunctionFromHasher<Val, MyHash, 2, 4>;
     let compress = MyCompress::new(hash);
 
-    type ValMmcs = FieldMerkleTreeMmcs<Val, MyHash, MyCompress, 8>;
+    type ValMmcs = FieldMerkleTreeMmcs<Val, MyHash, MyCompress, 4>;
     let val_mmcs = ValMmcs::new(hash, compress);
 
     type ChallengeMmcs = ExtensionMmcs<Val, Challenge, ValMmcs>;
@@ -161,7 +163,7 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
     type Dft = Radix2DitParallel;
     let dft = Dft {};
 
-    type Challenger = DuplexChallenger<Val, Perm, 16>;
+    type Challenger = DuplexChallenger<Val, Perm, 8>;
 
     type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
     type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
