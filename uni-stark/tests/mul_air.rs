@@ -14,7 +14,7 @@ use p3_matrix::{Matrix, MatrixRowSlices};
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon2::{DiffusionMatrixBabybear, DiffusionMatrixGoldilocks, Poseidon2};
-use p3_symmetric::{PaddingFreeSponge, TruncatedPermutation};
+use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32, TruncatedPermutation};
 use p3_uni_stark::{prove, verify, StarkConfigImpl, VerificationError};
 use rand::distributions::{Distribution, Standard};
 use rand::{thread_rng, Rng};
@@ -22,6 +22,7 @@ use tracing_forest::ForestLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Registry};
+use p3_keccak::Keccak256Hash;
 
 /// How many `a * b = c` operations to do per row in the AIR.
 const REPETITIONS: usize = 911;
@@ -145,13 +146,13 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
     type Perm = Poseidon2<Val, MyMds, DiffusionMatrixBabybear, 16, 7>;
     let perm = Perm::new_from_rng(8, 22, mds, DiffusionMatrixBabybear, &mut thread_rng());
 
-    type MyHash = PaddingFreeSponge<Perm, 16, 8, 8>;
-    let hash = MyHash::new(perm.clone());
+    type MyHash = SerializingHasher32<Keccak256Hash>;
+    let hash = MyHash::new(Keccak256Hash {});
 
-    type MyCompress = TruncatedPermutation<Perm, 2, 8, 16>;
-    let compress = MyCompress::new(perm.clone());
+    type MyCompress = CompressionFunctionFromHasher<Val, MyHash, 2, 8>;
+    let compress = MyCompress::new(hash);
 
-    type ValMmcs = FieldMerkleTreeMmcs<<Val as Field>::Packing, MyHash, MyCompress, 8>;
+    type ValMmcs = FieldMerkleTreeMmcs<Val, MyHash, MyCompress, 8>;
     let val_mmcs = ValMmcs::new(hash, compress);
 
     type ChallengeMmcs = ExtensionMmcs<Val, Challenge, ValMmcs>;
