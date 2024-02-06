@@ -2,7 +2,7 @@ use itertools::Itertools;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_baby_bear::BabyBear;
 use p3_challenger::DuplexChallenger;
-use p3_commit::{ExtensionMmcs};
+use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::extension::BinomialExtensionField;
 use p3_field::Field;
@@ -173,13 +173,12 @@ fn test_prove_goldilocks() -> Result<(), VerificationError> {
         mmcs: challenge_mmcs,
     };
     type Pcs =
-    TwoAdicFriPcs<TwoAdicFriPcsConfig<Val, Challenge, Challenger, Dft, ValMmcs, ChallengeMmcs>>;
+        TwoAdicFriPcs<TwoAdicFriPcsConfig<Val, Challenge, Challenger, Dft, ValMmcs, ChallengeMmcs>>;
     let pcs = Pcs::new(fri_config, dft, val_mmcs);
 
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
-
-    let pcs = Pcs::new(dft, val_mmcs, ldt);
     let config = StarkConfigImpl::new(pcs);
+
     let mut challenger = Challenger::new(perm.clone());
     let trace = random_valid_trace::<Val>(HEIGHT);
     tracing::info!(
