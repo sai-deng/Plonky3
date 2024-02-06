@@ -76,7 +76,15 @@ fn main() -> Result<(), VerificationError> {
 
     let inputs = (0..NUM_HASHES).map(|_| random()).collect::<Vec<_>>();
     let trace = generate_trace_rows::<Val>(inputs);
+    println!(
+        "trace height: {}, trace width: {}",
+        trace.height(),
+        trace.width()
+    );
     let proof = prove::<MyConfig, _>(&config, &KeccakAir {}, &mut challenger, trace);
+
+    let serialized_proof = postcard::to_allocvec(&proof).expect("unable to serialize proof");
+    tracing::info!("serialized_proof len: {} bytes", serialized_proof.len());
 
     let mut challenger = Challenger::new(perm);
     verify(&config, &KeccakAir {}, &mut challenger, &proof)
