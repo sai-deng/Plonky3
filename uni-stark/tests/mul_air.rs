@@ -6,10 +6,9 @@ use p3_commit::{ExtensionMmcs};
 use p3_dft::Radix2DitParallel;
 use p3_field::extension::BinomialExtensionField;
 use p3_field::Field;
-use p3_fri::{FriBasedPcs, FriConfigImpl, FriLdt};
+use p3_fri::{FriConfig, TwoAdicFriPcs, TwoAdicFriPcsConfig};
 use p3_goldilocks::Goldilocks;
 use p3_keccak::Keccak256Hash;
-use p3_ldt::QuotientMmcs;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_matrix::{Matrix, MatrixRowSlices};
 use p3_mds::coset_mds::CosetMds;
@@ -101,16 +100,19 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
 
     type Challenger = DuplexChallenger<Val, Perm, 16>;
 
-    type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
-    type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
-    let fri_config = MyFriConfig::new(1, 100, 16, challenge_mmcs);
-    let ldt = FriLdt { config: fri_config };
+    let fri_config = FriConfig {
+        log_blowup: 1,
+        num_queries: 100,
+        proof_of_work_bits: 16,
+        mmcs: challenge_mmcs,
+    };
+    type Pcs =
+        TwoAdicFriPcs<TwoAdicFriPcsConfig<Val, Challenge, Challenger, Dft, ValMmcs, ChallengeMmcs>>;
+    let pcs = Pcs::new(fri_config, dft, val_mmcs);
 
-    type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
-
-    let pcs = Pcs::new(dft, val_mmcs, ldt);
     let config = StarkConfigImpl::new(pcs);
+
     let mut challenger = Challenger::new(perm.clone());
     let trace = random_valid_trace::<Val>(HEIGHT);
     tracing::info!(
@@ -164,12 +166,16 @@ fn test_prove_goldilocks() -> Result<(), VerificationError> {
 
     type Challenger = DuplexChallenger<Val, Perm, 8>;
 
-    type Quotient = QuotientMmcs<Domain, Challenge, ValMmcs>;
-    type MyFriConfig = FriConfigImpl<Val, Challenge, Quotient, ChallengeMmcs, Challenger>;
-    let fri_config = MyFriConfig::new(1, 100, 16, challenge_mmcs);
-    let ldt = FriLdt { config: fri_config };
+    let fri_config = FriConfig {
+        log_blowup: 1,
+        num_queries: 100,
+        proof_of_work_bits: 16,
+        mmcs: challenge_mmcs,
+    };
+    type Pcs =
+    TwoAdicFriPcs<TwoAdicFriPcsConfig<Val, Challenge, Challenger, Dft, ValMmcs, ChallengeMmcs>>;
+    let pcs = Pcs::new(fri_config, dft, val_mmcs);
 
-    type Pcs = FriBasedPcs<MyFriConfig, ValMmcs, Dft, Challenger>;
     type MyConfig = StarkConfigImpl<Val, Challenge, PackedChallenge, Pcs, Challenger>;
 
     let pcs = Pcs::new(dft, val_mmcs, ldt);
