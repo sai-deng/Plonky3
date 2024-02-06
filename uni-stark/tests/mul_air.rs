@@ -2,7 +2,7 @@ use itertools::Itertools;
 use p3_air::{Air, AirBuilder, BaseAir};
 use p3_baby_bear::BabyBear;
 use p3_challenger::DuplexChallenger;
-use p3_commit::ExtensionMmcs;
+use p3_commit::{ExtensionMmcs};
 use p3_dft::Radix2DitParallel;
 use p3_field::extension::BinomialExtensionField;
 use p3_field::Field;
@@ -15,10 +15,7 @@ use p3_matrix::{Matrix, MatrixRowSlices};
 use p3_mds::coset_mds::CosetMds;
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon2::{DiffusionMatrixBabybear, DiffusionMatrixGoldilocks, Poseidon2};
-use p3_symmetric::{
-    CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32, SerializingHasher64,
-    TruncatedPermutation,
-};
+use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32, SerializingHasher64};
 use p3_uni_stark::{prove, verify, StarkConfigImpl, VerificationError};
 use rand::distributions::{Distribution, Standard};
 use rand::{thread_rng, Rng};
@@ -30,6 +27,7 @@ use tracing_subscriber::{EnvFilter, Registry};
 /// How many `a * b = c` operations to do per row in the AIR.
 const REPETITIONS: usize = 911;
 const TRACE_WIDTH: usize = REPETITIONS * 3;
+const HEIGHT: usize = 1 << 14;
 
 struct MulAir;
 
@@ -74,8 +72,6 @@ fn test_prove_baby_bear() -> Result<(), VerificationError> {
         .with(EnvFilter::from_default_env())
         .with(ForestLayer::default())
         .init();
-
-    const HEIGHT: usize = 1 << 14;
 
     type Val = BabyBear;
     type Domain = Val;
@@ -140,8 +136,6 @@ fn test_prove_goldilocks() -> Result<(), VerificationError> {
         .with(EnvFilter::from_default_env())
         .with(ForestLayer::default())
         .init();
-
-    const HEIGHT: usize = 1 << 14;
 
     type Val = Goldilocks;
     type Domain = Val;
