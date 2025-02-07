@@ -3,24 +3,35 @@ on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
+    branches: [main]
 
 jobs:
   process:
+    if: |
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
         with:
-          pattern: metrics-*.json
+          ref: main
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-*.json
           path: metrics
 
-      - name: Merge data
+      - name: Process Data
         run: |
-          mkdir -p gh-pages-data
-          jq -s '. | sort_by(.timestamp)' metrics/*.json > gh-pages-data/metrics.json
+          mkdir -p gh-pages/data
+          jq -s 'sort_by(.timestamp)' metrics/*.json > gh-pages/data/metrics.json
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: gh-pages-data
+          path: gh-pages
 
   deploy:
     needs: process
@@ -28,7 +39,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+
     steps:
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
