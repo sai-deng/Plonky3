@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+<div id="chart"></div>
+
+<script>
+    fetch('https://sai-deng.github.io/Plonky3/metrics.json')
+        .then(r => r.json())
+        .then(data => {
+            const layout = {title: 'Plonky3 Performance Metrics'};
+            const traces = [{
+                x: data.map(d => d.timestamp),
+                y: data.map(d => d.metrics.prove_time_s),
+                name: 'Proving Time (s)',
+                type: 'scatter'
+            },{
+                x: data.map(d => d.timestamp),
+                y: data.map(d => d.metrics.verify_time_ms),
+                name: 'Verification Time (ms)',
+                yaxis: 'y2'
+            }];
+
+            Plotly.newPlot('chart', traces, layout);
+        });
+</script>
+</body>
+</html>
