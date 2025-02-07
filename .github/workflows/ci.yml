@@ -125,3 +125,35 @@ jobs:
         cargo check --verbose --package p3-symmetric
         cargo check --verbose --package p3-uni-stark
         cargo check --verbose --package p3-util
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref, 'main') && !contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        id: rs-stable
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-bench-${{ steps.rs-stable.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Run Benchmark
+        run: |
+          chmod +x .github/scripts/benchmark.sh
+          .github/scripts/benchmark.sh
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: benchmark-results
+          path: benchmark.log
