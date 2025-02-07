@@ -164,3 +164,15 @@ jobs:
           name: benchmark-${{ github.sha }}
           path: benchmark-*.log
           retention-days: 7
+
+      - name: Get CPU info
+        id: cpu-info
+        run: |
+          MODEL=$(lscpu | grep 'Model name' | cut -d':' -f2 | xargs)
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+
+      - name: Get Rust version
+        id: rustc-version
+        run: |
+          VERSION=$(rustc --version | cut -d' ' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT

@@ -45,5 +45,30 @@ echo "Trace Generation: ${GEN_TIME}ms"
 echo "Proving Time: ${PROVE_TIME}s"
 echo "Verification Time: ${VERIFY_TIME}ms"
 
-# Preserve detailed logs
-echo "Detailed log saved to: $LOG_FILE"
+# After metric extraction
+JSON_DATA=$(jq -n \
+  --arg sha "$GITHUB_SHA" \
+  --arg date "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  --arg branch "$GITHUB_REF_NAME" \
+  --arg workflow "$GITHUB_WORKFLOW" \
+  --arg gen "$GEN_TIME" \
+  --arg prove "$PROVE_TIME" \
+  --arg verify "$VERIFY_TIME" \
+  '{
+    commit: $sha,
+    timestamp: $date,
+    branch: $branch,
+    workflow: $workflow,
+    metrics: {
+      trace_gen_ms: ($gen | tonumber),
+      prove_time_s: ($prove | tonumber),
+      verify_time_ms: ($verify | tonumber)
+    },
+    system: {
+      runner: "${{ runner.os }}",
+      rustc: "${{ steps.rustc-version.outputs.version }}",
+      cpu: "${{ steps.cpu-info.outputs.model }}"
+    }
+  }')
+
+echo "$JSON_DATA" > metrics.json
