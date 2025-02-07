@@ -125,3 +125,54 @@ jobs:
         cargo check --verbose --package p3-symmetric
         cargo check --verbose --package p3-uni-stark
         cargo check --verbose --package p3-util
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref, 'main') && !contains(toJSON(github.event.commits.*.message), '[skip-ci]')"
+
+    env:
+      RUSTFLAGS: "-Ctarget-cpu=native"
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        id: rs-stable
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-bench-${{ steps.rs-stable.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Run Benchmark
+        run: |
+          chmod +x .github/scripts/benchmark.sh
+          .github/scripts/benchmark.sh
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-${{ github.sha }}
+          path: benchmark-*.log
+          retention-days: 7
+
+      - name: Get CPU info
+        id: cpu-info
+        run: |
+          MODEL=$(lscpu | grep 'Model name' | cut -d':' -f2 | xargs)
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+
+      - name: Get Rust version
+        id: rustc-version
+        run: |
+          VERSION=$(rustc --version | cut -d' ' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT

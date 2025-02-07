@@ -1,0 +1,34 @@
+name: Metrics Collection
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: metrics-*.json
+          path: metrics
+
+      - name: Merge data
+        run: |
+          mkdir -p gh-pages-data
+          jq -s '. | sort_by(.timestamp)' metrics/*.json > gh-pages-data/metrics.json
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages-data
+
+  deploy:
+    needs: process
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
