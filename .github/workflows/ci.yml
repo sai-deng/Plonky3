@@ -153,7 +153,9 @@ jobs:
           .github/scripts/benchmark.sh
 
       - name: Upload Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results
-          path: benchmark.log
+          name: benchmark-results-${{ github.sha }}
+          path: |
+            benchmark.log
+          retention-days: 7
