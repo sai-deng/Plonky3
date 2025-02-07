@@ -1,30 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Plonky3 Benchmarks</title>
+    <!-- Load Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 <div id="chart"></div>
 
 <script>
-    fetch('https://sai-deng.github.io/Plonky3/metrics.json')
-        .then(r => r.json())
+    // Fetch metrics data
+    fetch('https://sai-deng.github.io/Plonky3/data/metrics.json')
+        .then(response => response.json())
         .then(data => {
-            const layout = {title: 'Plonky3 Performance Metrics'};
+            // Prepare chart data
             const traces = [{
-                x: data.map(d => d.timestamp),
+                x: data.map(d => new Date(d.timestamp)),
                 y: data.map(d => d.metrics.prove_time_s),
-                name: 'Proving Time (s)',
+                name: 'Proving Time',
                 type: 'scatter'
-            },{
-                x: data.map(d => d.timestamp),
-                y: data.map(d => d.metrics.verify_time_ms),
-                name: 'Verification Time (ms)',
+            }, {
+                x: data.map(d => new Date(d.timestamp)),
+                y: data.map(d => d.metrics.trace_gen_ms),
+                name: 'Trace Generation',
                 yaxis: 'y2'
+            }, {
+                x: data.map(d => new Date(d.timestamp)),
+                y: data.map(d => d.metrics.verify_time_ms),
+                name: 'Verification',
+                yaxis: 'y3'
             }];
 
+            // Layout configuration
+            const layout = {
+                title: 'Performance Metrics History',
+                yaxis: { title: 'Proving Time (s)' },
+                yaxis2: {
+                    title: 'Trace Gen (ms)',
+                    overlaying: 'y',
+                    side: 'right'
+                },
+                yaxis3: {
+                    title: 'Verify (ms)',
+                    overlaying: 'y',
+                    side: 'left',
+                    position: 0.05
+                }
+            };
+
+            // Render chart
             Plotly.newPlot('chart', traces, layout);
-        });
+        })
+        .catch(error => console.error('Error loading data:', error));
 </script>
 </body>
 </html>
